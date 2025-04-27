@@ -1,19 +1,23 @@
-# Emotion Detection Project
+# Vikasya - Community Feedback and Emotion Detection Platform
 
 ## Overview
-This project is designed to detect emotions using advanced machine learning models. The web application is built using Next.js and FastAPI, with a focus on performance and user experience.
+Vikasya is a web application designed to collect and analyze community feedback on public services. It leverages advanced AI models to detect emotions from voice and text inputs, providing actionable insights to improve public services.
 
 ## Features
-- **Emotion Detection**: Detects emotions from user inputs.
-- **Modern Web App**: Built with Next.js, FastAPI, prop drilling, and lazy loading.
-- **User-Friendly Interface**: Easy to navigate and use.
+- **Voice and Text Feedback**: Users can submit feedback via voice or text input.
+- **Emotion Detection**: AI-powered emotion analysis for voice inputs.
+- **Community Feedback Summary**: Aggregates and summarizes feedback for public services.
+- **Category-Based Feedback**: Organizes feedback into categories like sanitation, road conditions, and public safety.
+- **Responsive Design**: Optimized for both desktop and mobile devices.
 
 ## Components
+
 ### UI Components
-- **Dialog**: Includes `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, and `DialogDescription`.
-- **Drawer**: Includes `DrawerContent`, `DrawerHeader`, `DrawerFooter`, `DrawerTitle`, and `DrawerDescription`.
-- **Form**: Includes `FormControl`, `FormDescription`, and `FormMessage`.
-- **Toast**: Includes `Toast`, `ToastClose`, `ToastDescription`, `ToastProvider`, `ToastTitle`, and `ToastViewport`.
+- **Button**: Customizable button component.
+- **Input**: Styled input fields.
+- **Toast**: Notification system for user feedback.
+- **Sidebar**: Collapsible sidebar for navigation.
+- **Card**: Modular card components for displaying content.
 
 ### Roadmap Section
 The roadmap section outlines the project's development stages, including:
@@ -132,10 +136,55 @@ http://127.0.0.1:8000
   - Model Cards
   - Recording and Emotion Detection
 
+### Feedback Page - Vikasya
+
+This file contains the implementation of the feedback page for the Vikasya application. The page allows users to provide feedback on public services, either through voice or text input. It also displays a community feedback summary for the selected service.
+
+---
+
+## Features
+
+- **Voice Input**: Users can record their feedback using their microphone.
+- **Text Input**: Users can type their feedback if voice input is not supported or preferred.
+- **Community Feedback Summary**: Displays aggregated feedback from other users in the same district.
+- **Dynamic Service Categories**: Feedback is categorized based on the selected service.
+
+---
+
+## Key Components
+
+### 1. **Voice Input**
+- Uses the browser's `SpeechRecognition` API to capture and transcribe voice input.
+- Handles errors gracefully and provides fallback to text input if the browser does not support speech recognition.
+
+### 2. **Text Input**
+- A styled textarea component for users to type their feedback.
+- Includes character count and validation to ensure feedback is provided before submission.
+
+### 3. **Community Feedback Summary**
+- Fetches and displays a summary of feedback submitted by other users in the same district and for the same service category.
+- Provides a fallback message if no feedback is available or if the fetch request fails.
+
+---
+
+## API Endpoints
+
+### 1. Submit Feedback
+- **URL**: `/submit_feedback/`
+- **Method**: `POST`
+- **Request Body**:
+  ```json
+  {
+    "district_name": "Mailsandra",
+    "service_type": "Public Sanitation",
+    "user_feedback": "The public toilets are not clean."
+  }
+  ```
+
 ## Installation
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/emotion-detection.git
+    git clone https://github.com/Ayush-Bhardwaj05/vikasya.git
     ```
 2. Navigate to the project directory:
     ```sh
