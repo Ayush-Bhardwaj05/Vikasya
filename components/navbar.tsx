@@ -11,7 +11,7 @@ const navItems = [
   { name: "Home", path: "/" },
   { name: "Explore", path: "/explore" },
   { name: "Our Models", path: "/models" },
-  { name: "About Us", path: "/about" },
+  { name: "Public Issues", path: "/public-issues" },
 ]
 
 export default function Navbar() {
