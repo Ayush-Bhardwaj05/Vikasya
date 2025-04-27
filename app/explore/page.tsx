@@ -29,7 +29,7 @@ export default function AudioRecorder() {
       formData.append("file", audioBlob, "recording.wav");
       formData.append("responses", JSON.stringify(responses));
 
-      const response = await fetch("https://vibesense230.zapto.org/convo/process-audio", {
+      const response = await fetch("https://codehers-backend.zapto.org/convo/process-audio", {
         method: "POST",
         body: formData,
       });

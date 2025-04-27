@@ -31,7 +31,7 @@ export default function AuthPage() {
     const endpoint = type === "login" ? "/auth/login" : "/auth/signup"
 
     try {
-      const response = await fetch(`https://vibesense230.zapto.org${endpoint}`, {
+      const response = await fetch(`https://codehers-backend.zapto.org${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -44,7 +44,7 @@ export default function AuthPage() {
       if (type === "login") {
         localStorage.setItem("token", data.access_token)
         alert("Login successful!")
-        router.push("/explore")
+        router.push("/public-issues")
       } else {
         alert("Registration successful! Please log in.")
         setActiveTab("login")

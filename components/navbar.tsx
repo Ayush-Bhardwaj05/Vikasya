@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button"
 
 const navItems = [
   { name: "Home", path: "/" },
-  { name: "Explore", path: "/explore" },
+  { name: "Explore", path: "https://issueheatmap.streamlit.app/" },
   { name: "Our Models", path: "/models" },
-  { name: "Public Issues", path: "/public-issues" },
+  { name: "Public", path: "/public-issues" },
+  {name: "Tweet Analyzer", path: "https://twitterscraper.streamlit.app/" },
 ]
 
 export default function Navbar() {

@@ -10,9 +10,13 @@ export default function FeedbackPage() {
   const { id } = useParams()
   const [isRecording, setIsRecording] = useState(false)
   const [transcript, setTranscript] = useState("")
+  const [responseText, setResponseText] = useState("")
+  const [communitySummary, setCommunitySummary] = useState("")
   const [browserSupported, setBrowserSupported] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [districtName, setDistrictName] = useState("Your District")
+  const [loadingSummary, setLoadingSummary] = useState(false)
   const recognitionRef = useRef<any>(null)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
 
@@ -21,8 +25,28 @@ export default function FeedbackPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [transcript])
 
-  // Initialize speech recognition
+  // Initialize speech recognition, get location, and load community summary
   useEffect(() => {
+    // Get user location
+    const getLocation = async () => {
+      try {
+        if (navigator.geolocation) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000
+            })
+          })
+          
+          // Simplified location handling - in a real app you'd call a geocoding API
+          setDistrictName("Mailsandra") // Default or from actual geolocation
+        }
+      } catch (error) {
+        console.error("Error getting location:", error)
+      }
+    }
+
+    // Initialize speech recognition
     if (typeof window === "undefined") return
 
     if (!('webkitSpeechRecognition' in window)) {
@@ -57,12 +81,42 @@ export default function FeedbackPage() {
       stopRecording()
     }
 
+    getLocation()
+
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop()
       }
     }
   }, [])
+
+  // Load community summary when district or service type changes
+  useEffect(() => {
+    const loadCommunitySummary = async () => {
+      if (!districtName || districtName === "Your District") return
+      
+      setLoadingSummary(true)
+      try {
+        const response = await fetch(
+          `https://vikasya-rag-backend.onrender.com/summary/${encodeURIComponent(districtName)}/${encodeURIComponent(getCategoryTitle(id as string))}`
+        )
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        setCommunitySummary(data.summary || "No community feedback available yet.")
+      } catch (error) {
+        console.error("Failed to load community summary:", error)
+        setCommunitySummary("Could not load community feedback at this time.")
+      } finally {
+        setLoadingSummary(false)
+      }
+    }
+
+    loadCommunitySummary()
+  }, [districtName, id])
 
   const toggleRecording = () => {
     if (isRecording) {
@@ -77,6 +131,7 @@ export default function FeedbackPage() {
       recognitionRef.current.start()
       setIsRecording(true)
       setIsSuccess(false)
+      setResponseText("")
     }
   }
 
@@ -87,6 +142,8 @@ export default function FeedbackPage() {
     setIsRecording(false)
   }
 
+ 
+  
   const submitFeedback = async () => {
     if (!transcript.trim()) {
       alert("Please record some feedback first")
@@ -96,17 +153,43 @@ export default function FeedbackPage() {
     setIsSubmitting(true)
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      console.log("Feedback submitted:", { id, transcript })
+      const response = await fetch('https://vikasya-rag-backend.onrender.com/submit_feedback/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          district_name: districtName,
+          service_type: getCategoryTitle(id as string),
+          user_feedback: transcript
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setResponseText(data.response)
       setIsSuccess(true)
       setTranscript("")
+      
+      // Refresh the community summary after submitting new feedback
+      const summaryResponse = await fetch(
+        `https://vikasya-rag-backend.onrender.com/summary/${encodeURIComponent(districtName)}/${encodeURIComponent(getCategoryTitle(id as string))}`
+      )
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json()
+        setCommunitySummary(summaryData.summary)
+      }
     } catch (error) {
       console.error("Submission failed:", error)
+      alert("Failed to submit feedback. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
   }
+
 
   if (!browserSupported) {
     return (
@@ -149,6 +232,7 @@ export default function FeedbackPage() {
 
         <div className="bg-gradient-to-br from-[#13071E] to-[#1E0B33] rounded-xl border border-purple-500/30 p-6 mb-6 shadow-lg">
           <h2 className="text-xl font-bold text-white mb-4">Record Your Feedback</h2>
+          <p className="text-purple-300 mb-4">District: {districtName} | Service: {getCategoryTitle(id as string)}</p>
           
           <div className="mb-4 p-4 min-h-32 max-h-64 overflow-y-auto bg-black/20 rounded-lg border border-purple-500/20 scrollbar-thin scrollbar-thumb-purple-900 scrollbar-track-transparent">
             {transcript ? (
@@ -212,6 +296,38 @@ export default function FeedbackPage() {
           </div>
         </div>
 
+        {responseText && (
+          <div className="mb-6 bg-gradient-to-br from-[#1A0B2E] to-[#2E0B33] rounded-xl border border-purple-500/30 p-6">
+            <h3 className="text-lg font-semibold text-purple-300 mb-3">Response from Public Services</h3>
+            <div className="text-purple-100 whitespace-pre-wrap">
+              {responseText}
+            </div>
+          </div>
+        )}
+
+        {/* Community Summary Section */}
+        <div className="mb-6 bg-gradient-to-br from-[#1A0B2E] to-[#2E0B33] rounded-xl border border-purple-500/30 p-6">
+          <h3 className="text-lg font-semibold text-purple-300 mb-3 flex items-center gap-2">
+            Community Feedback Summary
+            <span className="text-xs bg-purple-900/50 px-2 py-1 rounded-full">
+              {districtName} • {getCategoryTitle(id as string)}
+            </span>
+          </h3>
+          {loadingSummary ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+              <span className="ml-2 text-purple-300">Loading community feedback...</span>
+            </div>
+          ) : (
+            <div className="text-purple-100 whitespace-pre-wrap">
+              {communitySummary || "No community feedback available yet."}
+            </div>
+          )}
+          <div className="mt-3 text-xs text-purple-400">
+            This summary is generated from feedback submitted by other users in your area.
+          </div>
+        </div>
+
         <div className="bg-gradient-to-br from-[#13071E] to-[#1E0B33] rounded-xl border border-purple-500/30 p-6 shadow-lg">
           <h2 className="text-xl font-bold text-white mb-4">About This Issue</h2>
           <div className="flex items-start gap-4 mb-4">
@@ -234,11 +350,34 @@ export default function FeedbackPage() {
   )
 }
 
+function getCategoryTitle(id: string): string {
+  const titles: Record<string, string> = {
+    "1": "Public Sanitation",
+    "2": "Garbage Collection",
+    "3": "Road Conditions",
+    "4": "Street Lighting",
+    "5": "Water Supply",
+    "6": "Public Transport",
+    "7": "Noise Pollution",
+    "8": "Green Spaces",
+    "9": "Public Safety",
+    "10": "Other Services"
+  }
+  return titles[id] || "Public Service"
+}
+
 function getCategoryDescription(id: string): string {
   const descriptions: Record<string, string> = {
     "1": "Public sanitation issues including cleanliness of public toilets and waste management. Recent reports indicate 65% dissatisfaction with current conditions.",
     "2": "Garbage collection services including schedule reliability and coverage. Many residents report missed pickups and overflowing bins.",
-    "3": "Road conditions including potholes and maintenance quality. Over 120 potholes reported in this area last month."
+    "3": "Road conditions including potholes and maintenance quality. Over 120 potholes reported in this area last month.",
+    "4": "Street lighting issues including non-functional lights and inadequate coverage in certain areas.",
+    "5": "Water supply problems including irregular timing and water quality concerns.",
+    "6": "Public transport complaints including bus frequency and condition of vehicles.",
+    "7": "Noise pollution from construction, traffic, or commercial establishments.",
+    "8": "Maintenance and quality of public parks and green spaces.",
+    "9": "Public safety concerns including police visibility and response times.",
+    "10": "Other public service issues not covered by specific categories."
   }
   return descriptions[id] || "Public service feedback category. Your input helps us prioritize improvements."
 }
@@ -258,6 +397,20 @@ function getCategoryIcon(id: string): React.ReactNode {
     "3": (
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 12h20M12 2v20M5 5l14 14M5 19l14-14"/>
+      </svg>
+    ),
+    "4": (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    ),
+    "5": (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 4h14l1 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><line x1="6" y1="8" x2="6" y2="18"/>
+        <line x1="18" y1="8" x2="18" y2="18"/>
       </svg>
     )
   }

@@ -28,7 +28,7 @@ const models: Model[] = [
     name: "VibeSense Indian",
     image: "/placeholder.svg?height=400&width=400",
     description: "VibeSense is the first model trained exclusively on a self-collected Indian-accented speech dataset, ensuring unmatched accuracy. It uses voice augmentation for enhanced generalization, making it a pioneering solution for real-time emotion detection.",
-    url: `${process.env.NEXT_PUBLIC_API_URL}/predict-indian`,
+    url: `https://codehers-backend.zapto.org/predict-indian`,
     specs: {
       accuracy: "93.7%",
       training: "3000",
@@ -41,7 +41,7 @@ const models: Model[] = [
     name: "VibeSense Foreign",
     image: "/placeholder.svg?height=400&width=400",
     description: "Model trained on CREMA-D, RAVDESS, SAVEE and TESS COMBINED. NOTE: Low Accuracy for Indian Accent.",
-    url: `${process.env.NEXT_PUBLIC_API_URL}/predict-emotion`,
+    url: `https://codehers-backend.zapto.org/predict-emotion`,
     specs: {
       accuracy: "96%",
       training: "33000",
