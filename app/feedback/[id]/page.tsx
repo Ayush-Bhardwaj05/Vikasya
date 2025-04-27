@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
-import { Mic, MicOff, ArrowLeft, Check, Loader2 } from "lucide-react"
+import { Mic, MicOff, ArrowLeft, Check, Loader2, Type, Keyboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { Textarea } from "@/components/ui/textarea"
+import { Send } from "lucide-react"
 
 export default function FeedbackPage() {
   const { id } = useParams()
@@ -17,17 +19,15 @@ export default function FeedbackPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [districtName, setDistrictName] = useState("Your District")
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [inputMode, setInputMode] = useState<"voice" | "text">("voice")
   const recognitionRef = useRef<any>(null)
   const transcriptEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom of transcript
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [transcript])
 
-  // Initialize speech recognition, get location, and load community summary
   useEffect(() => {
-    // Get user location
     const getLocation = async () => {
       try {
         if (navigator.geolocation) {
@@ -37,20 +37,18 @@ export default function FeedbackPage() {
               timeout: 10000
             })
           })
-          
-          // Simplified location handling - in a real app you'd call a geocoding API
-          setDistrictName("Mailsandra") // Default or from actual geolocation
+          setDistrictName("Mailsandra")
         }
       } catch (error) {
         console.error("Error getting location:", error)
       }
     }
 
-    // Initialize speech recognition
     if (typeof window === "undefined") return
 
     if (!('webkitSpeechRecognition' in window)) {
       setBrowserSupported(false)
+      setInputMode("text")
       return
     }
     
@@ -90,7 +88,6 @@ export default function FeedbackPage() {
     }
   }, [])
 
-  // Load community summary when district or service type changes
   useEffect(() => {
     const loadCommunitySummary = async () => {
       if (!districtName || districtName === "Your District") return
@@ -101,9 +98,9 @@ export default function FeedbackPage() {
           `https://vikasya-rag-backend.onrender.com/summary/${encodeURIComponent(districtName)}/${encodeURIComponent(getCategoryTitle(id as string))}`
         )
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
+        // if (!response.ok) {
+        //   throw new Error(`HTTP error! status: ${response.status}`)
+        // }
 
         const data = await response.json()
         setCommunitySummary(data.summary || "No community feedback available yet.")
@@ -142,11 +139,18 @@ export default function FeedbackPage() {
     setIsRecording(false)
   }
 
- 
-  
+  const toggleInputMode = () => {
+    if (isRecording) stopRecording()
+    setInputMode(prev => prev === "voice" ? "text" : "voice")
+  }
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setTranscript(e.target.value)
+  }
+
   const submitFeedback = async () => {
     if (!transcript.trim()) {
-      alert("Please record some feedback first")
+      alert("Please provide some feedback first")
       return
     }
 
@@ -174,7 +178,6 @@ export default function FeedbackPage() {
       setIsSuccess(true)
       setTranscript("")
       
-      // Refresh the community summary after submitting new feedback
       const summaryResponse = await fetch(
         `https://vikasya-rag-backend.onrender.com/summary/${encodeURIComponent(districtName)}/${encodeURIComponent(getCategoryTitle(id as string))}`
       )
@@ -190,8 +193,7 @@ export default function FeedbackPage() {
     }
   }
 
-
-  if (!browserSupported) {
+  if (!browserSupported && inputMode === "voice") {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0A0011] to-[#1E0B33] p-6">
         <div className="max-w-3xl mx-auto">
@@ -204,9 +206,16 @@ export default function FeedbackPage() {
           <div className="bg-gradient-to-br from-[#13071E] to-[#1E0B33] rounded-xl border border-purple-500/30 p-6 shadow-lg">
             <h2 className="text-xl font-bold text-red-400 mb-4">Browser Not Supported</h2>
             <p className="text-purple-200 mb-4">
-              Speech recognition is not supported in your browser. Please try Google Chrome.
+              Speech recognition is not supported in your browser. Please try Google Chrome or switch to text input.
             </p>
-            <div className="flex items-center gap-2 text-yellow-400">
+            <Button 
+              onClick={() => setInputMode("text")}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Type className="mr-2 h-4 w-4" />
+              Switch to Text Input
+            </Button>
+            <div className="mt-4 flex items-center gap-2 text-yellow-400">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -231,69 +240,146 @@ export default function FeedbackPage() {
         </Link>
 
         <div className="bg-gradient-to-br from-[#13071E] to-[#1E0B33] rounded-xl border border-purple-500/30 p-6 mb-6 shadow-lg">
-          <h2 className="text-xl font-bold text-white mb-4">Record Your Feedback</h2>
-          <p className="text-purple-300 mb-4">District: {districtName} | Service: {getCategoryTitle(id as string)}</p>
-          
-          <div className="mb-4 p-4 min-h-32 max-h-64 overflow-y-auto bg-black/20 rounded-lg border border-purple-500/20 scrollbar-thin scrollbar-thumb-purple-900 scrollbar-track-transparent">
-            {transcript ? (
-              <p className="text-purple-100 whitespace-pre-wrap">{transcript}</p>
-            ) : (
-              <p className="text-purple-400 italic">
-                {isRecording ? (
-                  <span className="flex items-center gap-2">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
-                    </span>
-                    Listening... Speak now
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">Provide Your Feedback</h2>
+            <Button 
+              onClick={toggleInputMode}
+              variant="outline"
+              className="relative w-12 h-6 p-0 bg-gradient-to-r from-gray-800 to-gray-900 border-purple-500/50 hover:border-purple-400/70 rounded-full transition-all duration-300 group"
+            >
+              <span className={`absolute inset-0 flex items-center transition-transform duration-300 ${inputMode === 'voice' ? 'translate-x-0' : 'translate-x-6'}`}>
+                {inputMode === 'voice' ? (
+                  <span className="w-6 h-6 flex items-center justify-center bg-purple-600 rounded-full group-hover:bg-purple-500">
+                    <Mic className="h-3 w-3 text-white" />
                   </span>
                 ) : (
-                  "Press the microphone button to start recording"
+                  <span className="w-6 h-6 flex items-center justify-center bg-purple-600 rounded-full group-hover:bg-purple-500">
+                    <Keyboard className="h-3 w-3 text-white" />
+                  </span>
                 )}
-              </p>
-            )}
-            <div ref={transcriptEndRef} />
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <Button
-              onClick={toggleRecording}
-              className={`flex items-center gap-2 ${
-                isRecording 
-                  ? "bg-red-600 hover:bg-red-700 animate-pulse" 
-                  : "bg-purple-600 hover:bg-purple-700"
-              } transition-all`}
-              disabled={isSubmitting}
-            >
-              {isRecording ? (
-                <>
-                  <MicOff className="h-5 w-5" />
-                  Stop Recording
-                </>
-              ) : (
-                <>
-                  <Mic className="h-5 w-5" />
-                  Start Recording
-                </>
-              )}
+              </span>
+              <span className="absolute inset-0 flex items-center justify-center text-xs text-purple-300 group-hover:text-purple-200 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                {inputMode === 'voice' ? 'Text' : 'Voice'}
+              </span>
             </Button>
-
-            {transcript && (
-              <Button
-                onClick={submitFeedback}
-                className="bg-green-600 hover:bg-green-700"
-                disabled={isSubmitting || isSuccess}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : isSuccess ? (
-                  <Check className="h-5 w-5" />
-                ) : (
-                  "Submit Feedback"
-                )}
-              </Button>
-            )}
           </div>
+          
+          <p className="text-purple-300 mb-4">District: {districtName} | Service: {getCategoryTitle(id as string)}</p>
+          
+          {inputMode === 'voice' ? (
+            <>
+              <div className="mb-4 p-4 min-h-32 max-h-64 overflow-y-auto bg-black/20 rounded-lg border border-purple-500/20 scrollbar-thin scrollbar-thumb-purple-900 scrollbar-track-transparent">
+                {transcript ? (
+                  <p className="text-purple-100 whitespace-pre-wrap">{transcript}</p>
+                ) : (
+                  <p className="text-purple-400 italic">
+                    {isRecording ? (
+                      <span className="flex items-center gap-2">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                        </span>
+                        Listening... Speak now
+                      </span>
+                    ) : (
+                      "Press the microphone button to start recording"
+                    )}
+                  </p>
+                )}
+                <div ref={transcriptEndRef} />
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  onClick={toggleRecording}
+                  className={`flex items-center gap-2 ${
+                    isRecording 
+                      ? "bg-red-600 hover:bg-red-700 animate-pulse" 
+                      : "bg-purple-600 hover:bg-purple-700"
+                  } transition-all`}
+                  disabled={isSubmitting}
+                >
+                  {isRecording ? (
+                    <>
+                      <MicOff className="h-5 w-5" />
+                      Stop Recording
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-5 w-5" />
+                      Start Recording
+                    </>
+                  )}
+                </Button>
+
+                {transcript && (
+                  <Button
+                    onClick={submitFeedback}
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={isSubmitting || isSuccess}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : isSuccess ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      "Submit Feedback"
+                    )}
+                  </Button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="relative mb-6">
+                <Textarea
+                  value={transcript}
+                  onChange={handleTextChange}
+                  className="min-h-[180px] w-full bg-gray-900/50 backdrop-blur-sm 
+                            border-2 border-purple-500/30 focus:border-purple-400/60
+                            text-purple-100 placeholder-purple-400
+                            rounded-xl p-4 pr-12 resize-none
+                            transition-all duration-300 ease-in-out
+                            hover:border-purple-500/40 focus:ring-1 focus:ring-purple-500/20"
+                  placeholder="Share your thoughts about this service..."
+                />
+                <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                  <span className={`text-xs ${transcript.length > 0 ? 'text-purple-300' : 'text-purple-400/50'}`}>
+                    {transcript.length}/500
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={submitFeedback}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700
+                            text-white shadow-lg shadow-green-900/30
+                            px-6 py-3 rounded-xl font-medium
+                            transition-all duration-200 hover:shadow-green-900/40
+                            disabled:opacity-60 disabled:pointer-events-none"
+                  disabled={isSubmitting || isSuccess || !transcript.trim()}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : isSuccess ? (
+                    <>
+                      <Check className="h-5 w-5 mr-2" />
+                      Feedback Submitted!
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5 mr-2" />
+                      Submit Feedback
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
         {responseText && (
@@ -305,7 +391,6 @@ export default function FeedbackPage() {
           </div>
         )}
 
-        {/* Community Summary Section */}
         <div className="mb-6 bg-gradient-to-br from-[#1A0B2E] to-[#2E0B33] rounded-xl border border-purple-500/30 p-6">
           <h3 className="text-lg font-semibold text-purple-300 mb-3 flex items-center gap-2">
             Community Feedback Summary
